@@ -1,9 +1,30 @@
-- https://grouplens.org/datasets/movielens/25m/
-- https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/
+# Bases de Datos No Relacionales - FING
 
-# TODO: add mongo and neo4j setups
+## Descripción General
 
-## Relational Schema
+### Objetivo
+El propósito de este trabajo es tomar un dominio de datos común y modelarlo utilizando al menos dos enfoques distintos distintos de bases de datos no relacionales, 
+con el objetivo de analizar y comparar las ventajas y desventajas que ofrece cada paradigma. 
+Esta iniciativa se enmarca dentro de la consigna correspondiente a la Familia 5, titulada "Modelado cruzado o con variantes", 
+la cual propone explorar cómo diferentes modelos —como documentales, de grafos, de clave-valor o columnar— abordan la representación, 
+el almacenamiento y la consulta de los mismos datos.
+
+Para garantizar una comparación justa y significativa entre los enfoques seleccionados, se busca que las consultas sean conceptualmente equivalentes y que los diseños implementados en cada modelo se ajusten a criterios razonables dentro de su paradigma. 
+Asimismo, se llevan a cabo benchmarks específicos que permiten evaluar aspectos clave del rendimiento, como tiempos de respuesta y eficiencia operativa, entre otras métricas relevantes.
+
+### Recursos Utilizados
+Para el desarrollo del trabajo se utilizaron las siguientes herramientas y conjuntos de datos:
+
+- **MovieLens 25M**: Conjunto de datos provisto por GroupLens, que contiene 25 millones de calificaciones realizadas por usuarios sobre películas. 
+Este dataset sirvió como base común para aplicar los distintos modelos de bases de datos no relacionales. Disponible en: https://grouplens.org/datasets/movielens/25m/
+
+- **MongoDB**: Base de datos orientada a documentos, utilizada para representar los datos en formato JSON de manera flexible y escalable. 
+Sempleó la versión para macOS siguiendo la guía oficial de instalación: https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/
+
+- **Neo4j**: Base de datos orientada a grafos, empleada para modelar relaciones complejas entre entidades como usuarios, películas y géneros. 
+Su modelo basado en nodos y relaciones permite consultas eficientes sobre estructuras de red. Información y descarga disponibles en: https://neo4j.com/download/
+
+## Relational Schema - TODO
 
 ```mermaid
 erDiagram
@@ -275,17 +296,58 @@ We can add:
 - Precompute the mean rating for each movie
 - Add user history interacction sequence
 
+
+## Quick Start
+
+1. **Descargar el Dataset**: Descargá el dataset MovieLens 25M desde el sitio oficial.
+```
+wget https://files.grouplens.org/datasets/movielens/ml-25m.zip
+unzip ml-25m.zip
+cd ml-25m
+```
+
+2. **Iniciar MongoDB**
+Instalación (macOS vía Homebrew):
+```
+brew tap mongodb/brew
+brew install mongodb-community@7.0
+```
+Iniciar el servicio:
+```
+brew services start mongodb/brew/mongodb-community
+```
+Verificar que esté corriendo:
+```
+mongosh
+```
+
+3. **Iniciar Neo4j**
+Instalación (con Homebrew en macOS):
+```
+brew install --cask neo4j
+```
+Iniciar Neo4j Desktop o usar Neo4j en terminal:
+```
+neo4j console
+```
+
+4. **Inicializar Entorno Python con Poetry**
+Instalar dependencias:
+```
+poetry install
+```
+
+Ingresar al entorno virtual:
+```
+poetry shell
+```
+
 ## Some Queries
 
 ### **1. User Ratings with Movie Details**
 
 This shows how to get user profiles with their rated movies' full details:
 
-python
-
-Copy
-
-Download
 
 ```
 ("User Ratings with Movie Details", lambda: list(db.command('aggregate', 'users', pipeline=[
@@ -318,11 +380,6 @@ Download
 
 This finds movies with the users who gave them the highest ratings:
 
-python
-
-Copy
-
-Download
 
 ```
 ("Movies with Top Raters", lambda: list(db.command('aggregate', 'movies', pipeline=[
@@ -366,12 +423,6 @@ Download
 ### **3. Genre-Based User Preferences**
 
 This analyzes which genres users rate most highly:
-
-python
-
-Copy
-
-Download
 
 ```
 ("User Genre Preferences", lambda: list(db.command('aggregate', 'users', pipeline=[
