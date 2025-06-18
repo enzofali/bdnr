@@ -1,6 +1,8 @@
 - https://grouplens.org/datasets/movielens/25m/
 - https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/
 
+# TODO: add mongo and neo4j setups
+
 ## Relational Schema
 
 ```mermaid
