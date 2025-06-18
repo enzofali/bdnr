@@ -24,7 +24,21 @@ Sempleó la versión para macOS siguiendo la guía oficial de instalación: http
 - **Neo4j**: Base de datos orientada a grafos, empleada para modelar relaciones complejas entre entidades como usuarios, películas y géneros. 
 Su modelo basado en nodos y relaciones permite consultas eficientes sobre estructuras de red. Información y descarga disponibles en: https://neo4j.com/download/
 
-## Relational Schema - TODO
+## Esquema Relacional
+
+Este esquema modela las interacciones entre usuarios y películas dentro del conjunto de datos MovieLens 25M utilizando una estructura relacional normalizada. 
+Define cómo se relacionan las películas, los usuarios, las calificaciones, las etiquetas, los enlaces externos y los datos del Tag Genome:
+
+- `USERS` (Usuarios): Representa a los usuarios que calificaron o etiquetaron películas. Cada usuario está identificado de forma única por userId.
+- `MOVIES` (Películas): Contiene información sobre cada película, incluyendo el title (título) y los genres (géneros). Cada película se identifica mediante un movieId.
+- `RATINGS` (Calificaciones): Registra las calificaciones que los usuarios asignan a las películas, incluyendo el rating (valor entre 0.5 y 5.0 estrellas) y un timestamp (marca de tiempo). 
+Forma una relación muchos-a-muchos entre USERS y MOVIES.
+- `TAGS` (Etiquetas): Almacena etiquetas en texto libre que los usuarios aplican a películas, junto con una timestamp. También establece una relación muchos-a-muchos entre USERS y MOVIES.
+- `LINKS` (Enlaces): Mapea cada movieId a identificadores externos como imdbId y tmdbId, permitiendo referencias cruzadas con otras bases de datos de películas.
+- `GENOME_TAGS` (Etiquetas del Genoma): Es un diccionario que describe las etiquetas (tagId, tag) utilizadas en los puntajes de relevancia del genoma.
+- `GENOME_SCORES` (Puntajes del Genoma): Asocia cada movieId y tagId con un valor de relevance, que indica cuán fuertemente una película expresa una determinada etiqueta.
+
+El siguiente diagrama ilustra visualmente este esquema y las relaciones entre sus tablas:
 
 ```mermaid
 erDiagram
@@ -78,7 +92,66 @@ erDiagram
     GENOME_TAGS ||--o{ GENOME_SCORES : "measured"
 ```
 
-## Hybrid Normalization
+## Quick Start
+
+1. **Descargar el Dataset**: Descargá el dataset MovieLens 25M desde el sitio oficial.
+```
+wget https://files.grouplens.org/datasets/movielens/ml-25m.zip
+unzip ml-25m.zip
+cd ml-25m
+```
+
+2. **Iniciar MongoDB**
+
+Instalación (macOS vía Homebrew):
+```
+brew tap mongodb/brew
+brew install mongodb-community@7.0
+```
+Iniciar el servicio:
+```
+brew services start mongodb/brew/mongodb-community
+```
+Verificar que esté corriendo:
+```
+mongosh
+```
+
+3. **Iniciar Neo4j**
+
+Instalación (con Homebrew en macOS):
+```
+brew install --cask neo4j
+```
+Iniciar Neo4j Desktop o usar Neo4j en terminal:
+```
+neo4j console
+```
+
+4. **Inicializar Entorno Python con Poetry**
+
+Instalar dependencias:
+```
+poetry install
+```
+
+Ingresar al entorno virtual:
+```
+poetry shell
+```
+
+## Base de Datos Documental
+
+### Normalización Híbrida
+
+Aunque finalmente no se implementó este modelo en el proyecto, se diseñó una estructura de base de datos en MongoDB basada en una normalización híbrida, que combina datos embebidos y referencias según los patrones de acceso esperados.
+
+Este enfoque busca un equilibrio eficiente: al embeber información relacionada dentro del documento de película, se facilita el acceso rápido a metadatos, calificaciones, etiquetas y relevancias, lo cual es ideal para sistemas de recomendación que requieren estos datos de forma conjunta
+
+### Diseño General
+- `Películas` (movies): Documento principal. Incluye información como title, genres y links, y puede embeber subdocumentos de ratings, tags y genome para facilitar consultas completas con un solo acceso.
+- `Usuarios` (users) : Derivados de los datos de calificaciones y etiquetas. Pueden contener subdocumentos embebidos con historial de interacciones y estadísticas agregadas (por ejemplo, promedio de rating o fechas de primera/última calificación).
+- `Calificaciones` (ratings), `etiquetas` (tags) y `genome scores`: También pueden almacenarse en colecciones separadas, si se requieren consultas o agregaciones específicas a nivel global.
 
 ### **1. Movies Collection (`movies.csv`)**
 
@@ -199,23 +272,33 @@ erDiagram
 }
 ```
 
-Fully normalize (separate collections for everything) or fully denormalize (embed all related data) depending on your query patterns.
-
-**Embedding vs Referencing**
-
-Embedding ratings/tags in movies if you frequently access movie data with their ratings
-
-Keeping ratings/tags separate if you frequently query ratings/tags independently
-
-**Indexes**: Create indexes on:
-
-- **`movieId`** in all collections
-- **`userId`** in ratings and tags collections
-- **`timestamp`** fields for time-based queries
-
-Como queremos hacer un sistema de recomendación, lo mojer va a ser embeber todo en in single lookup.
-
 ## **Single Document Lookup**
+Este modelo adopta una estrategia de desnormalización total, embebiendo toda la información relevante de una película —calificaciones, etiquetas y datos del tag genome— en un único documento. 
+Está especialmente optimizado para sistemas de recomendación que requieren acceder rápidamente a todos los atributos de una película en una sola consulta, por lo que fue el enfoque elegido para este proyecto.
+
+Centralizar los datos en un solo documento reduce la complejidad de las consultas, mejora el rendimiento y permite actualizaciones atómicas, lo que facilita la consistencia y la replicación.
+
+Es recomendable embeber las calificaciones (ratings) y etiquetas (tags) dentro del documento de película cuando estos datos se consultan conjuntamente, como ocurre habitualmente en sistemas de recomendación.
+
+Para garantizar un rendimiento óptimo, deben ser indexados los campos `movieId`, `userId`, y `timestamp` para permitir consultas eficientes basadas en el tiempo.
+
+## Diseño del Modelo
+
+1. **Colección de Películas** (`movies`)
+
+Cada documento incluye:
+- Información básica: `movieId`, `title`, `year`, `genres`
+- Datos del genoma de etiquetas (`tagGenome`) embebidos
+- Calificaciones (`ratings`) y etiquetas (`tags`) embebidas
+
+Esto permite obtener todo el contexto de una película sin joins ni múltiples búsquedas.
+
+2. **Colección de Usuarios** (`users`)
+
+Cada documento incluye:
+- `userId` original
+- Historial embebido de `ratings` y `tags` aplicados
+- Estadísticas precomputadas: número total de calificaciones, promedio de calificación, primera y última interacción.
 
 ### **1. Movies Collection**
 
@@ -287,190 +370,6 @@ Como queremos hacer un sistema de recomendación, lo mojer va a ser embeber todo
 }
 ```
 
-Get complete movie data (including genome scores) with one query
-
-**Atomic Updates**: All movie data is contained in one document, good for replications
-
-We can add:
-
-- Precompute the mean rating for each movie
-- Add user history interacction sequence
+## Base de Datos de Grafos - TODO
 
 
-## Quick Start
-
-1. **Descargar el Dataset**: Descargá el dataset MovieLens 25M desde el sitio oficial.
-```
-wget https://files.grouplens.org/datasets/movielens/ml-25m.zip
-unzip ml-25m.zip
-cd ml-25m
-```
-
-2. **Iniciar MongoDB**
-Instalación (macOS vía Homebrew):
-```
-brew tap mongodb/brew
-brew install mongodb-community@7.0
-```
-Iniciar el servicio:
-```
-brew services start mongodb/brew/mongodb-community
-```
-Verificar que esté corriendo:
-```
-mongosh
-```
-
-3. **Iniciar Neo4j**
-Instalación (con Homebrew en macOS):
-```
-brew install --cask neo4j
-```
-Iniciar Neo4j Desktop o usar Neo4j en terminal:
-```
-neo4j console
-```
-
-4. **Inicializar Entorno Python con Poetry**
-Instalar dependencias:
-```
-poetry install
-```
-
-Ingresar al entorno virtual:
-```
-poetry shell
-```
-
-## Some Queries
-
-### **1. User Ratings with Movie Details**
-
-This shows how to get user profiles with their rated movies' full details:
-
-
-```
-("User Ratings with Movie Details", lambda: list(db.command('aggregate', 'users', pipeline=[
-    {"$match": {"userId": {"$in": list(selected_users[:5])}}},# Sample users{"$lookup": {
-        "from": "movies",
-        "localField": "ratings.movieId",# Join on movie IDs from ratings"foreignField": "movieId",
-        "as": "ratedMovies"
-    }},
-    {"$project": {
-        "userId": 1,
-        "ratedMovies": {
-            "$map": {
-                "input": "$ratedMovies",
-                "as": "movie",
-                "in": {
-                    "title": "$$movie.title",
-                    "year": "$$movie.year",
-                    "genres": "$$movie.genres",
-                    "avgRating": "$$movie.stats.avgRating"
-                }
-            }
-        },
-        "ratingCount": {"$size": "$ratings"}
-    }},
-    {"$limit": 5}
-])))
-```
-
-### **2. Movies with Their Top Raters**
-
-This finds movies with the users who gave them the highest ratings:
-
-
-```
-("Movies with Top Raters", lambda: list(db.command('aggregate', 'movies', pipeline=[
-    {"$match": {"stats.ratingCount": {"$gt": 50}}},# Popular movies{"$lookup": {
-        "from": "users",
-        "let": {"movie_id": "$movieId"},
-        "pipeline": [
-            {"$unwind": "$ratings"},
-            {"$match": {
-                "$expr": {
-                    "$and": [
-                        {"$eq": ["$ratings.movieId", "$$movie_id"]},
-                        {"$gte": ["$ratings.rating", 4.5]}# High ratings]
-                }
-            }},
-            {"$project": {
-                "userId": 1,
-                "rating": "$ratings.rating",
-                "timestamp": "$ratings.timestamp"
-            }}
-        ],
-        "as": "highScorers"
-    }},
-    {"$match": {"highScorers.0": {"$exists": True}}},# Has at least one high scorer{"$project": {
-        "title": 1,
-        "year": 1,
-        "avgRating": "$stats.avgRating",
-        "highScorers": {
-            "$slice": [
-                {"$sortArray": {
-                    "input": "$highScorers",
-                    "sortBy": {"rating": -1}
-                }},
-                5# Top 5 raters]
-        }
-    }},
-    {"$limit": 5}
-])))
-```
-
-### **3. Genre-Based User Preferences**
-
-This analyzes which genres users rate most highly:
-
-```
-("User Genre Preferences", lambda: list(db.command('aggregate', 'users', pipeline=[
-    {"$match": {"stats.ratingCount": {"$gt": 20}}},# Active users{"$lookup": {
-        "from": "movies",
-        "localField": "ratings.movieId",
-        "foreignField": "movieId",
-        "as": "ratedMovies"
-    }},
-    {"$unwind": "$ratedMovies"},
-    {"$unwind": "$ratedMovies.genres"},
-    {"$group": {
-        "_id": {
-            "userId": "$userId",
-            "genre": "$ratedMovies.genres"
-        },
-        "avgRating": {"$avg": {
-            "$arrayElemAt": [
-                {"$filter": {
-                    "input": "$ratings",
-                    "as": "r",
-                    "cond": {"$eq": ["$$r.movieId", "$ratedMovies.movieId"]}
-                }},
-                0
-            ]
-        }}
-    }},
-    {"$group": {
-        "_id": "$_id.userId",
-        "preferredGenres": {
-            "$push": {
-                "genre": "$_id.genre",
-                "avgRating": "$avgRating"
-            }
-        },
-        "count": {"$sum": 1}
-    }},
-    {"$project": {
-        "userId": "$_id",
-        "preferredGenres": {
-            "$slice": [
-                {"$sortArray": {
-                    "input": "$preferredGenres",
-                    "sortBy": {"avgRating": -1}
-                }},
-                3# Top 3 genres]
-        }
-    }},
-    {"$limit": 5}
-])))
-```
