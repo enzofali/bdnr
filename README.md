@@ -3,14 +3,15 @@
 ## Descripción General
 
 ### Objetivo
-El propósito de este trabajo es tomar un dominio de datos común y modelarlo utilizando al menos dos enfoques distintos distintos de bases de datos no relacionales, 
-con el objetivo de analizar y comparar las ventajas y desventajas que ofrece cada paradigma. 
+El propósito de este trabajo es tomar un dominio de datos común y modelarlo utilizando al menos dos enfoques distintos de bases de datos no relacionales, 
+con el objetivo de analizar y comparar las ventajas y desventajas que ofrece cada paradigma.
+
 Esta iniciativa se enmarca dentro de la consigna correspondiente a la Familia 5, titulada "Modelado cruzado o con variantes", 
 la cual propone explorar cómo diferentes modelos —como documentales, de grafos, de clave-valor o columnar— abordan la representación, 
 el almacenamiento y la consulta de los mismos datos.
 
 Para garantizar una comparación justa y significativa entre los enfoques seleccionados, se busca que las consultas sean conceptualmente equivalentes y que los diseños implementados en cada modelo se ajusten a criterios razonables dentro de su paradigma. 
-Asimismo, se llevan a cabo benchmarks específicos que permiten evaluar aspectos clave del rendimiento, como tiempos de respuesta y eficiencia operativa, entre otras métricas relevantes.
+Asimismo, se llevan a cabo benchmarks específicos que permiten evaluar aspectos clave del rendimiento, como tiempos de respuesta, entre otras métricas relevantes.
 
 ### Recursos Utilizados
 Para el desarrollo del trabajo se utilizaron las siguientes herramientas y conjuntos de datos:
@@ -19,7 +20,7 @@ Para el desarrollo del trabajo se utilizaron las siguientes herramientas y conju
 Este dataset sirvió como base común para aplicar los distintos modelos de bases de datos no relacionales. Disponible en: https://grouplens.org/datasets/movielens/25m/
 
 - **MongoDB**: Base de datos orientada a documentos, utilizada para representar los datos en formato JSON de manera flexible y escalable. 
-Sempleó la versión para macOS siguiendo la guía oficial de instalación: https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/
+Se empleó la versión para macOS siguiendo la guía oficial de instalación: https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/
 
 - **Neo4j**: Base de datos orientada a grafos, empleada para modelar relaciones complejas entre entidades como usuarios, películas y géneros. 
 Su modelo basado en nodos y relaciones permite consultas eficientes sobre estructuras de red. Información y descarga disponibles en: https://neo4j.com/download/
@@ -142,230 +143,120 @@ poetry shell
 
 ## Base de Datos Documental
 
-### Normalización Híbrida
+Este modelo implementa un enfoque completamente desnormalizado, incorporando toda la información relevante de películas -calificaciones, etiquetas y datos del genoma de etiquetas- dentro de un único documento. 
+Este diseño fue seleccionado para nuestro sistema de recomendación ya que permite acceso rápido a todos los atributos de una película mediante una sola consulta.
 
-Aunque finalmente no se implementó este modelo en el proyecto, se diseñó una estructura de base de datos en MongoDB basada en una normalización híbrida, que combina datos embebidos y referencias según los patrones de acceso esperados.
+La centralización de datos en un solo documento:
+- Reduce la complejidad de las consultas
+- Mejora el rendimiento
+- Permite actualizaciones atómicas
+- Simplifica la consistencia y replicación
 
-Este enfoque busca un equilibrio eficiente: al embeber información relacionada dentro del documento de película, se facilita el acceso rápido a metadatos, calificaciones, etiquetas y relevancias, lo cual es ideal para sistemas de recomendación que requieren estos datos de forma conjunta
+Incorporar calificaciones y etiquetas dentro de los documentos de películas es particularmente ventajoso cuando estos datos se consultan conjuntamente, 
+como es común en sistemas de recomendación.
 
-### Diseño General
-- `Películas` (movies): Documento principal. Incluye información como title, genres y links, y puede embeber subdocumentos de ratings, tags y genome para facilitar consultas completas con un solo acceso.
-- `Usuarios` (users) : Derivados de los datos de calificaciones y etiquetas. Pueden contener subdocumentos embebidos con historial de interacciones y estadísticas agregadas (por ejemplo, promedio de rating o fechas de primera/última calificación).
-- `Calificaciones` (ratings), `etiquetas` (tags) y `genome scores`: También pueden almacenarse en colecciones separadas, si se requieren consultas o agregaciones específicas a nivel global.
+Para un rendimiento óptimo, se deben indexar los siguientes campos:
+- `movieId`
+- `userId`
+- `timestamp`
 
-### **1. Movies Collection (`movies.csv`)**
+## Diseño del Modelo de Datos
 
-```
-{
-  _id: ObjectId,// MongoDB auto-generated IDmovieId: Number,// Original movie ID from CSVtitle: String,
-  year: Number,// Extracted from titlegenres: [String],// Array of genreslinks: {
-    imdbId: String,
-    tmdbId: String
-  },
-  ratings: [// Embedded ratings (optional - could be separate collection){
-      userId: Number,
-      rating: Number,
-      timestamp: Date
-    }
-  ],
-  tags: [// Embedded tags (optional - could be separate collection){
-      userId: Number,
-      tag: String,
-      timestamp: Date
-    }
-  ],
-  genome: [// Tag genome data (optional - could be separate collection){
-      tagId: Number,
-      tag: String,
-      relevance: Number
-    }
-  ]
-}
-```
-
-### **2. Ratings Collection (`ratings.csv`)**
-
-```
-{
-  _id: ObjectId,
-  userId: Number,
-  movieId: Number,
-  rating: Number,// 0.5 to 5.0timestamp: Date,
-// Optional reference to movie documentmovie: {
-    $ref: 'movies',
-    $id: ObjectId
-  }
-}
-```
-
-### **3. Tags Collection (`tags.csv`)**
-
-```
-{
-  _id: ObjectId,
-  userId: Number,
-  movieId: Number,
-  tag: String,
-  timestamp: Date,
-// Optional referencesmovie: {
-    $ref: 'movies',
-    $id: ObjectId
-  },
-  user: {
-    $ref: 'users',
-    $id: ObjectId
-  }
-}
-```
-
-### **4. Users Collection (derived from ratings and tags)**
-
-```
-{
-  _id: ObjectId,
-  userId: Number,// Original user ID from CSVratings: [// Embedded ratings (optional){
-      movieId: Number,
-      rating: Number,
-      timestamp: Date
-    }
-  ],
-  tags: [// Embedded tags (optional){
-      movieId: Number,
-      tag: String,
-      timestamp: Date
-    }
-  ],
-  stats: {// Aggregated statsratingCount: Number,
-    avgRating: Number,
-    firstRatingDate: Date,
-    lastRatingDate: Date
-  }
-}
-```
-
-### **5. Genome Tags Collection (`genome-tags.csv`)**
-
-```
-{
-  _id: ObjectId,
-  tagId: Number,
-  tag: String
-}
-```
-
-### **6. Genome Scores Collection (`genome-scores.csv`)**
-
-```
-{
-  _id: ObjectId,
-  movieId: Number,
-  tagId: Number,
-  relevance: Number,
-// Optional referencesmovie: {
-    $ref: 'movies',
-    $id: ObjectId
-  },
-  genomeTag: {
-    $ref: 'genomeTags',
-    $id: ObjectId
-  }
-}
-```
-
-## **Single Document Lookup**
-Este modelo adopta una estrategia de desnormalización total, embebiendo toda la información relevante de una película —calificaciones, etiquetas y datos del tag genome— en un único documento. 
-Está especialmente optimizado para sistemas de recomendación que requieren acceder rápidamente a todos los atributos de una película en una sola consulta, por lo que fue el enfoque elegido para este proyecto.
-
-Centralizar los datos en un solo documento reduce la complejidad de las consultas, mejora el rendimiento y permite actualizaciones atómicas, lo que facilita la consistencia y la replicación.
-
-Es recomendable embeber las calificaciones (ratings) y etiquetas (tags) dentro del documento de película cuando estos datos se consultan conjuntamente, como ocurre habitualmente en sistemas de recomendación.
-
-Para garantizar un rendimiento óptimo, deben ser indexados los campos `movieId`, `userId`, y `timestamp` para permitir consultas eficientes basadas en el tiempo.
-
-## Diseño del Modelo
-
-1. **Colección de Películas** (`movies`)
+### 1. **Colección de Películas** (`movies`)
 
 Cada documento incluye:
 - Información básica: `movieId`, `title`, `year`, `genres`
 - Datos del genoma de etiquetas (`tagGenome`) embebidos
 - Calificaciones (`ratings`) y etiquetas (`tags`) embebidas
+- Estadísticas precalculadas
 
-Esto permite obtener todo el contexto de una película sin joins ni múltiples búsquedas.
+Esta estructura proporciona contexto completo de la película sin necesidad de joins o múltiples búsquedas.
 
-2. **Colección de Usuarios** (`users`)
+**Estructura del Documento:**
+
+```python
+{
+  "_id": ObjectId,  # ID autogenerado por MongoDB
+  "movieId": Number,  # Identificador original de película (único)
+  "title": String,
+  "year": Number,  # Extraído del título (ej. "Toy Story (1995)" → 1995)
+  "genres": [String],  # Arreglo de géneros
+  
+  # Enlaces de referencia externa (no usados en recomendaciones)
+  "links": {
+    "imdbId": String,
+    "tmdbId": String
+  },
+  
+  # Datos del genoma de etiquetas incorporados
+  "tagGenome": [
+    {
+      "tagId": Number,
+      "tag": String,  # Descripción de la etiqueta
+      "relevance": Number  # Puntuación de relevancia 0-1
+    }
+  ],
+  
+  # Calificaciones de usuarios incorporadas
+  "ratings": [
+    {
+      "userId": Number,
+      "rating": Number,  # Escala de 0.5 a 5.0
+      "timestamp": Date
+    }
+  ],
+  
+  # Etiquetas de usuarios incorporadas
+  "tags": [
+    {
+      "userId": Number,
+      "tag": String,
+      "timestamp": Date
+    }
+  ],
+  
+  # Estadísticas precalculadas
+  "stats": {
+    "ratingCount": Number,
+    "avgRating": Number,  # Redondeado a 2 decimales
+    "ratingDistribution": {  # Conteos por nivel de calificación
+      "0.5": Number,
+      "1.0": Number,
+      # ... hasta 5.0
+    }
+  }
+}
+```
+
+### 2. **Colección de Usuarios** (`users`)
 
 Cada documento incluye:
 - `userId` original
 - Historial embebido de `ratings` y `tags` aplicados
-- Estadísticas precomputadas: número total de calificaciones, promedio de calificación, primera y última interacción.
+- Estadísticas precalculadas sobre actividad del usuario
 
-### **1. Movies Collection**
-
-```python
-{
-  _id: ObjectId, // MongoDB auto-generated ID
-  movieId: Number, // Original movie ID from CSV (unique)
-  title: String,
-  year: Number, // Extracted from title (e.g., "Toy Story (1995)" → 1995)
-  genres: [String], // Array of genres (e.g., ["Adventure", "Animation", "Children"])
-  
-  // External references, we could simply not use these
-  links: {
-    imdbId: String,
-    tmdbId: String
-  },
-  
-  // Tag genome data - embedded directly
-  tagGenome: [
-    {
-      tagId: Number,
-      tag: String, // The actual tag description
-      relevance: Number // Score between 0-1
-    }
-  ],
-  
-  // Optional: Ratings could be embedded or referenced
-  ratings: [
-    {
-      userId: Number,
-      rating: Number, // 0.5 to 5.0
-      timestamp: Date
-    }
-  ],
-  
-  // Optional: Tags could be embedded or referenced
-  tags: [
-    {
-      userId: Number,
-      tag: String,
-      timestamp: Date
-    }
-  ]
-}
-```
-
-### **2. Users Collection**
+**Estructura del Documento:**
 
 ```
 {
-  _id: ObjectId,
-  userId: Number,// Original user ID from CSVratings: [// Embedded ratings (optional){
-      movieId: Number,
-      rating: Number,
-      timestamp: Date
+  "_id": ObjectId,
+  "userId": Number,  # Identificador original de usuario
+  
+  # Historial de calificaciones incorporado
+  "ratingHistory": [
+    {
+      "movieId": Number,
+      "rating": Number,
+      "timestamp": Date
     }
   ],
-  tags: [// Embedded tags (optional){
-      movieId: Number,
-      tag: String,
-      timestamp: Date
-    }
-  ],
-  stats: {// Aggregated statsratingCount: Number,
-    avgRating: Number,
-    firstRatingDate: Date,
-    lastRatingDate: Date
+    
+  # Estadísticas agregadas del usuario
+  "stats": {
+    "ratingCount": Number,
+    "avgRating": Number,  # Redondeado a 2 decimales
+    # "firstRatingDate": Date,  # Disponible en ratingHistory ordenado
+    # "lastRatingDate": Date   # Disponible en ratingHistory ordenado
   }
 }
 ```
