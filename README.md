@@ -275,101 +275,23 @@ Y por otra parte, definimos las siguientes relaciones:
 - HAS_GENRE $\rightarrow$ una película tiene uno o más géneros asociados
 - TAGGED $\rightarrow$ un usuario asigna un tag textual a una película
 - HAS_RELEVANCE $\rightarrow$ una película está asociada a etiquetas (GenomeTag) con un score de relevancia
+graph TD
 
-def load_ratings(ratings_df: pd.DataFrame, batch_size: int = 1000) -> None:
-    """Creates User and Movie nodes with RATED relationships."""
-    rating_data = ratings_df.to_dict("records")
-    
-    query = """
-    UNWIND $batch AS row
-    MERGE (u:User {userId: row.userId})
-    MERGE (m:Movie {movieId: row.movieId})
-    MERGE (u)-[r:RATED]->(m)
-    SET r.rating = row.rating, 
-        r.timestamp = datetime({epochSeconds: row.timestamp})
-    """
-    
-    # Process in batches to avoid memory issues
-    for i in range(0, len(rating_data), batch_size):
-        batch = rating_data[i:i + batch_size]
-        graph.run(query, batch=batch)
+```mermaid
+%% Nodes
+User[User]
+Movie[Movie]
+GenomeTag[GenomeTag]
 
+%% Properties (pseudo-nodes for display only)
+Movie -->|title, releaseYear, genres[]| MovieProps((Movie Attributes))
+GenomeTag -->|tag| GenomeTagProps((tag text))
 
-def load_movies(movies_df: pd.DataFrame, batch_size: int = 1000) -> None:
-    """Creates Movie nodes, Genre nodes, and HAS_GENRE relationships"""
-    movie_data = movies_df.to_dict("records")
-      
-    query = """
-    UNWIND $batch AS row
-    MERGE (m:Movie {movieId: row.movieId})
-    SET m.title = row.title,
-        m.releaseYear = row.year,
-        m.genres = CASE 
-            WHEN row.genres IS NULL THEN []
-            WHEN row.genres = '' THEN []
-            ELSE [genre IN split(row.genres, '|') WHERE genre <> '']
-        END
-    """
-    
-    for i in range(0, len(movie_data), batch_size):
-        batch = movie_data[i:i + batch_size]
-        graph.run(query, batch=batch)
-
-
-def load_tags(tags_df: pd.DataFrame, batch_size: int = 1000) -> None:
-    """Creates TAGGED relationships between existing Users and Movies"""
-    # Clean data - remove null tags
-    tag_data = tags_df.dropna(subset=["tag"]).to_dict("records")
-    
-    query = """
-    UNWIND $batch AS row
-    MATCH (u:User {userId: row.userId})
-    MATCH (m:Movie {movieId: row.movieId})
-    MERGE (u)-[t:TAGGED]->(m)
-    SET t.tag = row.tag
-    """
-    
-    for i in range(0, len(tag_data), batch_size):
-        batch = tag_data[i:i + batch_size]
-        graph.run(query, batch=batch)
-
-
-def load_genome_tags(genome_tags_df: pd.DataFrame, batch_size: int = 1000) -> None:
-    """Load genome tags as GenomeTag nodes"""
-    genome_tag_data = genome_tags_df.to_dict("records")
-    
-    query = """
-    UNWIND $batch AS row
-    MERGE (gt:GenomeTag {tagId: row.tagId})
-    SET gt.tag = row.tag
-    """
-    
-    for i in range(0, len(genome_tag_data), batch_size):
-        batch = genome_tag_data[i:i + batch_size]
-        graph.run(query, batch=batch)
-
-
-def load_relevance_scores(
-        scores_df: pd.DataFrame, 
-        threshold: float = 0.8, 
-        batch_size: int = 1000
-) -> None:
-    """Load relevance scores between movies and genome tags"""
-    # Filter by relevance threshold
-    filtered_scores = scores_df[scores_df['relevance'] >= threshold]
-    score_data = filtered_scores.to_dict("records")
-    
-    query = """
-    UNWIND $batch AS row
-    MATCH (m:Movie {movieId: row.movieId})
-    MATCH (gt:GenomeTag {tagId: row.tagId})
-    MERGE (m)-[r:HAS_RELEVANCE]->(gt)
-    SET r.score = row.relevance
-    """
-    
-    for i in range(0, len(score_data), batch_size):
-        batch = score_data[i:i + batch_size]
-        graph.run(query, batch=batch)
+%% Relationships
+User -->|RATED<br>rating, timestamp| Movie
+User -->|TAGGED<br>tag| Movie
+Movie -->|HAS_RELEVANCE<br>score| GenomeTag
+```
 
 ## Benchmark
 
