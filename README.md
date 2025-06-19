@@ -279,48 +279,14 @@ graph TD
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffd8d8'}}}%%
-erDiagram
-    USER ||--o{ RATED : "rated"
-    USER ||--o{ TAGGED : "tagged"
-    MOVIE ||--o{ RATED : "was rated by"
-    MOVIE ||--o{ TAGGED : "was tagged by"
-    MOVIE ||--o{ HAS_RELEVANCE : "has relevance"
-    GENOME_TAG ||--o{ HAS_RELEVANCE : "is relevant to"
+graph TD
+    User -->|RATED {rating, timestamp}| Movie
+    User -->|TAGGED {tag}| Movie
+    Movie -->|HAS_RELEVANCE {score}| GenomeTag
 
-    USER {
-        string userId PK
-    }
-
-    MOVIE {
-        string movieId PK
-        string title
-        int releaseYear
-        string[] genres
-    }
-
-    GENOME_TAG {
-        string tagId PK
-        string tag
-    }
-
-    RATED {
-        string userId FK
-        string movieId FK
-        float rating
-        datetime timestamp
-    }
-
-    TAGGED {
-        string userId FK
-        string movieId FK
-        string tag
-    }
-
-    HAS_RELEVANCE {
-        string movieId FK
-        string tagId FK
-        float score
-    }
+    User[User]
+    Movie[Movie]
+    GenomeTag[GenomeTag]
 ```
 
 ## Benchmark
