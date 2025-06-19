@@ -264,3 +264,38 @@ Cada documento incluye:
 ## Base de Datos de Grafos - TODO
 
 
+## Benchmark
+
+### Metodología de Evaluación
+
+Implementaremos un sistema de benchmarking para medir el rendimiento de nuestros modelos de base de datos. El benchmark se centrará en:
+1. **Rendimiento de consultas**: Tiempos de respuesta para operaciones típicas
+2. **Consumo de recursos**: Uso de CPU, memoria y I/O
+3. **Estabilidad del sistema**: Comportamiento bajo carga sostenida
+
+### Métricas Clave a Medir
+
+1. **Latencia Total** (`wall_ms`)
+- Mide el tiempo real total por consulta (incluyendo cliente, servidor y red)
+- Refleja la experiencia real del usuario final
+
+
+2. **Latencia del Controlador** (`driver_ms`)
+- Mide el tiempo reportado por el controlador de la base de datos
+- Permite aislar el tiempo real del servidor, excluyendo el procesamiento del lado del cliente
+
+3. **Uso de CPU del Sistema** (`sys_cpu_pct`)
+- Mide el porcentaje de utilización de CPU durante las consultas
+- Identifica cuellos de botella de procesamiento
+
+4. **Uso de Memoria del Sistema** (`sys_mem_pct`)
+- Mide el porcentaje de memoria RAM utilizada
+- Detecta problemas de saturación de memoria
+
+5. **Memoria RSS de MongoDB** (`mongo_mem_rss`)
+- Mide la memoria física utilizada por el proceso de MongoDB
+- Muestra el footprint de memoria real del servidor
+
+6. **Fallos de Página Mayores** (major_faults)
+- Mide accesos a disco por falta de páginas en memoria
+- Indica problemas de I/O
