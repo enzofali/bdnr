@@ -278,19 +278,46 @@ Y por otra parte, definimos las siguientes relaciones:
 graph TD
 
 ```mermaid
-%% Nodes
-User[User]
-Movie[Movie]
-GenomeTag[GenomeTag]
-
-%% Properties (pseudo-nodes for display only)
-Movie -->|title, releaseYear, genres[]| MovieProps((Movie Attributes))
-GenomeTag -->|tag| GenomeTagProps((tag text))
-
-%% Relationships
-User -->|RATED<br>rating, timestamp| Movie
-User -->|TAGGED<br>tag| Movie
-Movie -->|HAS_RELEVANCE<br>score| GenomeTag
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffd8d8'}}}%%
+erDiagram
+    USER ||--o{ RATING : "RATES"
+    USER ||--o{ TAG : "TAGS"
+    MOVIE ||--o{ GENOME_TAG : "HAS_RELEVANCE"
+    
+    USER {
+        string userId PK
+    }
+    
+    MOVIE {
+        string movieId PK
+        string title
+        int releaseYear
+        string[] genres
+    }
+    
+    GENOME_TAG {
+        string tagId PK
+        string tag
+    }
+    
+    RATING {
+        string userId FK
+        string movieId FK
+        float rating
+        datetime timestamp
+    }
+    
+    TAG {
+        string userId FK
+        string movieId FK
+        string tag
+    }
+    
+    HAS_RELEVANCE {
+        string movieId FK
+        string tagId FK
+        float score
+    }
 ```
 
 ## Benchmark
