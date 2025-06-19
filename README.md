@@ -280,9 +280,9 @@ graph TD
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffd8d8'}}}%%
 graph TD
-    User -->|RATED {rating, timestamp}| Movie
-    User -->|TAGGED {tag}| Movie
-    Movie -->|HAS_RELEVANCE {score}| GenomeTag
+    User -->|RATED| Movie
+    User -->|TAGGED| Movie
+    Movie -->|HAS_RELEVANCE| GenomeTag
 
     User[User]
     Movie[Movie]
