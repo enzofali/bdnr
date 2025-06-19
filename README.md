@@ -267,8 +267,6 @@ Cada documento incluye:
 En nuestro diseño optamos por un modelo intuitivo y expresivo, en el cual representamos como nodos las siguientes entidades:
 - User (usuarios)
 - Movie (películas)
-- Genre (géneros)
-- GenomeTag (etiquetas genéticas del contenido)
 
 Y por otra parte, definimos las siguientes relaciones:
 - RATED $\rightarrow$ un usuario califica una película
@@ -282,11 +280,9 @@ graph TD
 graph TD
     User -->|RATED| Movie
     User -->|TAGGED| Movie
-    Movie -->|HAS_RELEVANCE| GenomeTag
 
     User[User]
     Movie[Movie]
-    GenomeTag[GenomeTag]
 ```
 
 ## Benchmark
