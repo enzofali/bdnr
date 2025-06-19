@@ -280,39 +280,42 @@ graph TD
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffd8d8'}}}%%
 erDiagram
-    USER ||--o{ RATING : "RATES"
-    USER ||--o{ TAG : "TAGS"
-    MOVIE ||--o{ GENOME_TAG : "HAS_RELEVANCE"
-    
+    USER ||--o{ RATED : "rated"
+    USER ||--o{ TAGGED : "tagged"
+    MOVIE ||--o{ RATED : "was rated by"
+    MOVIE ||--o{ TAGGED : "was tagged by"
+    MOVIE ||--o{ HAS_RELEVANCE : "has relevance"
+    GENOME_TAG ||--o{ HAS_RELEVANCE : "is relevant to"
+
     USER {
         string userId PK
     }
-    
+
     MOVIE {
         string movieId PK
         string title
         int releaseYear
         string[] genres
     }
-    
+
     GENOME_TAG {
         string tagId PK
         string tag
     }
-    
-    RATING {
+
+    RATED {
         string userId FK
         string movieId FK
         float rating
         datetime timestamp
     }
-    
-    TAG {
+
+    TAGGED {
         string userId FK
         string movieId FK
         string tag
     }
-    
+
     HAS_RELEVANCE {
         string movieId FK
         string tagId FK
