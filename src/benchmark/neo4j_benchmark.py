@@ -5,6 +5,23 @@ from typing import Callable
 from src.benchmark.dto import BenchmarkResult
 
 
+def profile_query(session, cypher_query: str, params: dict = {}):
+    result = session.run(f"PROFILE {cypher_query}", **params)
+    summary = result.consume()
+    profile = summary.profile  # Top-level plan operator
+
+    def extract_plan_data(plan, level=0):
+        return {
+            "operator": plan["operatorType"],
+            "arguments": plan.get("args", {}),
+            "db_hits": plan.get("dbHits", 0),
+            "rows": plan.get("records", 0),
+            "children": [extract_plan_data(child, level + 1) for child in plan.get("children", [])]
+        }
+
+    return extract_plan_data(profile)
+
+
 def run_benchmark(query_id: str,
                   run_query: Callable[[], tuple],
                   duration: int = 60,
