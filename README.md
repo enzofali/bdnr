@@ -261,8 +261,30 @@ Cada documento incluye:
 }
 ```
 
-## Base de Datos de Grafos - TODO
+## Base de Datos de Grafos
 
+#### Modelo de Datos
+El diseño de la base de datos se basa en un modelo optimizado para análisis de comportamiento y generación de recomendaciones.
+Se utilizan nodos y relaciones para representar de forma natural la interacción entre usuarios y películas.
+
+**Entidades principales**:
+
+- **User**: Representa a un usuario del sistema. Incluye información agregada sobre su historial de calificaciones.
+- **Movie**: Representa una película. Contiene metadatos, estadísticas de calificación y etiquetas semánticas.
+
+**Relaciones modeladas**:
+- `[:RATED {rating, timestamp}]`: Un usuario ha calificado una película, incluyendo el puntaje y la fecha.
+- `[:TAGGED {tag}]`: Un usuario ha etiquetado una película con una palabra clave o tag.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffd8d8'}}}%%
+graph TD
+    User -->|RATED| Movie
+    User -->|TAGGED| Movie
+
+    User[User]
+    Movie[Movie]
+```
 
 ## Benchmark
 

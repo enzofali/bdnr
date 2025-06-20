@@ -1,35 +1,49 @@
 import statistics
+import psutil
 import time
 from typing import Callable
-
-import psutil
-
 from src.benchmark.dto import BenchmarkResult
-from src.benchmark.mongo_listener import BenchListener
+
+
+def profile_query(session, cypher_query: str, params: dict = {}):
+    result = session.run(f"PROFILE {cypher_query}", **params)
+    summary = result.consume()
+    profile = summary.profile  # Top-level plan operator
+
+    def extract_plan_data(plan, level=0):
+        return {
+            "operator": plan["operatorType"],
+            "arguments": plan.get("args", {}),
+            "db_hits": plan.get("dbHits", 0),
+            "rows": plan.get("records", 0),
+            "children": [extract_plan_data(child, level + 1) for child in plan.get("children", [])]
+        }
+
+    return extract_plan_data(profile)
 
 
 def run_benchmark(query_id: str,
-                  run_query: Callable[[], object],
-                  listener: BenchListener,
+                  run_query: Callable[[], tuple],
                   duration: int = 60,
-                  warmup=5) -> BenchmarkResult:
+                  warmup: int = 5) -> BenchmarkResult:
     sys_cpu_pct, sys_mem_pct, wall_ms, driver_ms = [], [], [], []
-    mongo_mem_rss, major_faults = [], []
+    neo4j_mem_rss, major_faults = [], []
 
-    mongo_proc = next(
+    # Find Neo4j process
+    neo4j_proc = next(
         (p for p in psutil.process_iter(['name'])
-         if 'mongod' in (p.info['name'] or '').lower()),
+         if 'neo4j' in (p.info['name'] or '').lower()),
         None
     )
 
     psutil.cpu_percent(None)
-    if mongo_proc:
-        mongo_proc.cpu_percent(None)
-        prev_pageins = mongo_proc.memory_info().pageins
+    if neo4j_proc:
+        neo4j_proc.cpu_percent(None)
+        prev_pageins = neo4j_proc.memory_info().pageins
     else:
         prev_pageins = 0
 
-    # Warmup (caches and JITs stabilise)
+    # Warmup
     for _ in range(warmup):
         run_query()
 
@@ -38,27 +52,28 @@ def run_benchmark(query_id: str,
     t_end = time.time() + duration
 
     while time.time() < t_end:
+        start_time = time.perf_counter_ns()
         try:
-            result, elapsed_time = run_query()
-            # end-to-end latency (with client-side overhead)
-            wall_ms.append(elapsed_time / 1_000_000)
+            result, driver_time_ns = run_query()
+
+            wall_time_ns = time.perf_counter_ns() - start_time
+            wall_ms.append(wall_time_ns / 1_000_000)  # Convert to ms
+            driver_ms.append(driver_time_ns / 1_000_000)
             success_count += 1
         except Exception as e:
             errors.append(str(e))
 
-        # server + network latency
-        driver_ms.append(sum(listener.latencies) / 1000)
-        listener.latencies.clear()
-
+        # System resource monitoring
         sys_cpu_pct.append(psutil.cpu_percent(interval=None, percpu=False))
         sys_mem_pct.append(psutil.virtual_memory().percent)
 
-        if mongo_proc and mongo_proc.is_running():
-            mem_info = mongo_proc.memory_info()
-            mongo_mem_rss.append(mem_info.rss / 1024 ** 2)  # MB
+        # Neo4j process monitoring
+        if neo4j_proc and neo4j_proc.is_running():
+            mem_info = neo4j_proc.memory_info()
+            neo4j_mem_rss.append(mem_info.rss / 1024 ** 2)  # MB
 
-            cur_pageins = mongo_proc.memory_info().pageins
-            major_faults.append(max(0, cur_pageins - prev_pageins))  # avoid negatives
+            cur_pageins = neo4j_proc.memory_info().pageins
+            major_faults.append(max(0, cur_pageins - prev_pageins))
             prev_pageins = cur_pageins
 
         # throttles the loop, WARING bias in throughput measure
@@ -88,11 +103,11 @@ def run_benchmark(query_id: str,
         "sys_mem_avg_pct": statistics.mean(sys_mem_pct) if sys_mem_pct else 0,
         "sys_mem_p95_pct": statistics.quantiles(sys_mem_pct, n=20)[-1] if sys_mem_pct and len(sys_mem_pct) >= 5 else 0,
         "sys_mem_p99_pct": statistics.quantiles(sys_mem_pct, n=100)[-1] if sys_mem_pct and len(sys_mem_pct) >= 5 else 0,
-        "rss_avg_mb": statistics.mean(mongo_mem_rss) if mongo_mem_rss else 0,
-        "rss_p95_mb": statistics.quantiles(mongo_mem_rss, n=20)[-1] if mongo_mem_rss and len(
-            mongo_mem_rss) >= 5 else 0,
-        "rss_p99_mb": statistics.quantiles(mongo_mem_rss, n=100)[-1] if mongo_mem_rss and len(
-            mongo_mem_rss) >= 5 else 0,
+        "neo4j_rss_avg_mb": statistics.mean(neo4j_mem_rss) if neo4j_mem_rss else 0,
+        "neo4j_rss_p95_mb": statistics.quantiles(neo4j_mem_rss, n=20)[-1] if neo4j_mem_rss and len(
+            neo4j_mem_rss) >= 5 else 0,
+        "neo4j_rss_p99_mb": statistics.quantiles(neo4j_mem_rss, n=100)[-1] if neo4j_mem_rss and len(
+            neo4j_mem_rss) >= 5 else 0,
         "major_faults_per_sec": sum(major_faults) / duration if duration > 0 else 0,
         "throughput_qps": len(wall_ms) / duration if duration > 0 else 0
     }
@@ -104,6 +119,6 @@ def run_benchmark(query_id: str,
             "driver_ms": driver_ms,
             "sys_cpu_pct": sys_cpu_pct,
             "sys_mem_pct": sys_mem_pct,
-            "mongo_rss_mb": mongo_mem_rss,
+            "neo4j_rss_mb": neo4j_mem_rss,
         }
     )
