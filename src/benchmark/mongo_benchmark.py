@@ -1,20 +1,12 @@
 import statistics
 import time
 import random
-from dataclasses import dataclass
-from typing import Callable, Dict, List
+from typing import Callable
 
 import psutil
-from pymongo.cursor import Cursor
 
+from src.benchmark.dto import BenchmarkResult
 from src.benchmark.mongo_listener import BenchListener
-
-
-@dataclass
-class BenchmarkResult:
-    summary: Dict[str, float]
-    series: Dict[str, List[float]]
-
 
 GENRES = [
     "Adventure", "Animation", "Children", "Comedy", "Fantasy", "Action",
@@ -96,18 +88,15 @@ def run_benchmark(query_id: str,
 
     success_count = 0
     errors = []
-
     t_end = time.time() + duration
+
     while time.time() < t_end:
         try:
             result, elapsed_time = run_query()
-            if isinstance(result, Cursor):
-                list(result)  # force materialization
             # end-to-end latency (with client-side overhead)
             wall_ms.append(elapsed_time / 1_000_000)
             success_count += 1
         except Exception as e:
-            # print(e)
             errors.append(str(e))
 
         # server + network latency
@@ -134,10 +123,29 @@ def run_benchmark(query_id: str,
         "iterations": len(wall_ms),
         "successes": success_count,
         "errors": len(errors),
+
+        # Wall time metrics
         "wall_avg_ms": statistics.mean(wall_ms) if wall_ms else 0,
+        "wall_p95_ms": statistics.quantiles(wall_ms, n=20)[-1] if wall_ms and len(wall_ms) >= 5 else 0,
+        "wall_p99_ms": statistics.quantiles(wall_ms, n=100)[-1] if wall_ms and len(wall_ms) >= 5 else 0,
+
+        # Driver time metrics
         "driver_avg_ms": statistics.mean(driver_ms) if driver_ms else 0,
+        "driver_p95_ms": statistics.quantiles(driver_ms, n=20)[-1] if driver_ms and len(driver_ms) >= 5 else 0,
+        "driver_p99_ms": statistics.quantiles(driver_ms, n=100)[-1] if driver_ms and len(driver_ms) >= 5 else 0,
+
+        # System metrics
         "cpu_avg_pct": statistics.mean(sys_cpu_pct) if sys_cpu_pct else 0,
+        "cpu_p95_pct": statistics.quantiles(sys_cpu_pct, n=20)[-1] if sys_cpu_pct and len(sys_cpu_pct) >= 5 else 0,
+        "cpu_p99_pct": statistics.quantiles(sys_cpu_pct, n=100)[-1] if sys_cpu_pct and len(sys_cpu_pct) >= 5 else 0,
+        "sys_mem_avg_pct": statistics.mean(sys_mem_pct) if sys_mem_pct else 0,
+        "sys_mem_p95_pct": statistics.quantiles(sys_mem_pct, n=20)[-1] if sys_mem_pct and len(sys_mem_pct) >= 5 else 0,
+        "sys_mem_p99_pct": statistics.quantiles(sys_mem_pct, n=100)[-1] if sys_mem_pct and len(sys_mem_pct) >= 5 else 0,
         "rss_avg_mb": statistics.mean(mongo_mem_rss) if mongo_mem_rss else 0,
+        "rss_p95_mb": statistics.quantiles(mongo_mem_rss, n=20)[-1] if mongo_mem_rss and len(
+            mongo_mem_rss) >= 5 else 0,
+        "rss_p99_mb": statistics.quantiles(mongo_mem_rss, n=100)[-1] if mongo_mem_rss and len(
+            mongo_mem_rss) >= 5 else 0,
         "major_faults_per_sec": sum(major_faults) / duration if duration > 0 else 0,
         "throughput_qps": len(wall_ms) / duration if duration > 0 else 0
     }
