@@ -261,19 +261,20 @@ Cada documento incluye:
 }
 ```
 
-## Base de Datos de Grafos - TODO
+## Base de Datos de Grafos
 
-#### Carga general de nodos y relaciones
-En nuestro diseño optamos por un modelo intuitivo y expresivo, en el cual representamos como nodos las siguientes entidades:
-- User (usuarios)
-- Movie (películas)
+#### Modelo de Datos
+El diseño de la base de datos se basa en un modelo optimizado para análisis de comportamiento y generación de recomendaciones.
+Se utilizan nodos y relaciones para representar de forma natural la interacción entre usuarios y películas.
 
-Y por otra parte, definimos las siguientes relaciones:
-- RATED $\rightarrow$ un usuario califica una película
-- HAS_GENRE $\rightarrow$ una película tiene uno o más géneros asociados
-- TAGGED $\rightarrow$ un usuario asigna un tag textual a una película
-- HAS_RELEVANCE $\rightarrow$ una película está asociada a etiquetas (GenomeTag) con un score de relevancia
-graph TD
+**Entidades principales**:
+
+- **User**: Representa a un usuario del sistema. Incluye información agregada sobre su historial de calificaciones.
+- **Movie**: Representa una película. Contiene metadatos, estadísticas de calificación y etiquetas semánticas.
+
+**Relaciones modeladas**:
+- `[:RATED {rating, timestamp}]`: Un usuario ha calificado una película, incluyendo el puntaje y la fecha.
+- `[:TAGGED {tag}]`: Un usuario ha etiquetado una película con una palabra clave o tag.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffd8d8'}}}%%
