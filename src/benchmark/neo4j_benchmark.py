@@ -61,6 +61,7 @@ def run_benchmark(query_id: str,
             driver_ms.append(driver_time_ns / 1_000_000)
             success_count += 1
         except Exception as e:
+            print(e)
             errors.append(str(e))
 
         # System resource monitoring
