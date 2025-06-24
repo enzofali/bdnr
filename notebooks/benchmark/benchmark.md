@@ -30,11 +30,13 @@ Todos los benchmarks fueron realizados localmente bajo condiciones uniformes par
 
 ### Versiones de Software
 
-| Componente      | Versión                              |
-|-----------------|--------------------------------------|
-| Neo4j Server	   | 2025.05.0                            |
-| MongoDB Server  | 7.0.20                               |
-| Controlador     | Python	Neo4j 5.28.1 / PyMongo 4.13.1 |
+| Componente         | Versión                |
+|--------------------|------------------------|
+| Neo4j Server	      | 2025.05.0              |
+| Neo4j Controller   | Python	Neo4j 5.28.1    |
+| MongoDB Server     | 7.0.20                 |
+| MongoDB Controller | PyMongo 4.13.1         |
+
 
 ---
 
@@ -48,9 +50,9 @@ A continuación se presentan los tiempos medidos para cada motor de base de dato
 #### Neo4j
 
 | Tipo de Datos | Registros | Tiempo          |
-| ------------- | --------- | --------------- |
-| Usuarios      | 500       | 0.41 segundos   |
-| Películas     | 7,141     | 4.98 segundos   |
+| ------------- | --------- |-----------------|
+| Usuarios      | 500       | 36.59 segundos  |
+| Películas     | 7,141     | 127.62 segundos |
 | Ratings       | 62,834    | 85.41 segundos  |
 | Etiquetas     | 811,156   | 77.37 segundos  |
 | Total         | —         | 168.17 segundos |
@@ -77,15 +79,15 @@ El objetivo es observar el comportamiento de cada base bajo carga puntual y cont
 
 Durante las pruebas de actualización de timestamps, se registraron las siguientes métricas clave para comparar objetivamente el rendimiento de ambos motores:
 
-| Métrica                                      | Descripción                                                                                                                                                   |
-|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Latencia Total (`wall_ms`)                   | Mide el tiempo real total por consulta, incluyendo cliente, servidor y red. Refleja la experiencia real del usuario.                                          |
-| Latencia del Controlador (`driver_ms`)       | Mide el tiempo reportado por el controlador de la base de datos. Permite aislar el tiempo real del servidor, excluyendo el procesamiento del lado del cliente. |
-| Uso de CPU del Sistema (`sys_cpu_pct`)       | Mide el porcentaje de utilización de CPU durante las consultas. Identifica cuellos de botella de procesamiento.                                               |
-| Uso de Memoria del Sistema (`sys_mem_pct`)   | Mide el porcentaje de memoria RAM utilizada. Detecta problemas de saturación de memoria.                                                                      |
-| Memoria RSS de MongoDB (`mongo_mem_rss`)     | Mide la memoria física utilizada por el proceso de MongoDB. Muestra el footprint de memoria real del servidor.                                                |
-| Fallos de Página por Segundo (`major_faults`)| Mide accesos a disco por falta de páginas en memoria. Indica problemas de I/O.                                                                                |
-| Queries por Segundo (`throughput_qps`)       | Mide el proxy de Ancho de Banda teniendo en cuenta el throttling aplicado.                                                                                    |
+| Métrica                                        | Descripción                                                                                                                                                   |
+|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Latencia Total (`wall_ms`)                     | Mide el tiempo real total por consulta, incluyendo cliente, servidor y red. Refleja la experiencia real del usuario.                                          |
+| Latencia del Controlador (`driver_ms`)         | Mide el tiempo reportado por el controlador de la base de datos. Permite aislar el tiempo real del servidor, excluyendo el procesamiento del lado del cliente. |
+| Uso de CPU del Sistema (`sys_cpu_pct`)         | Mide el porcentaje de utilización de CPU durante las consultas. Identifica cuellos de botella de procesamiento.                                               |
+| Uso de Memoria del Sistema (`sys_mem_pct`)     | Mide el porcentaje de memoria RAM utilizada. Detecta problemas de saturación de memoria.                                                                      |
+| Memoria RSS de MongoDB (`driver_mem_rss`) | Mide la memoria física utilizada por el proceso de MongoDB. Muestra el footprint de memoria real del servidor.                                                |
+| Fallos de Página por Segundo (`major_faults`)  | Mide accesos a disco por falta de páginas en memoria. Indica problemas de I/O.                                                                                |
+| Queries por Segundo (`throughput_qps`)         | Mide el proxy de Ancho de Banda teniendo en cuenta el throttling aplicado.                                                                                    |
 
 ### Estrategia de Ejecución
 
@@ -128,17 +130,17 @@ con el objetivo de medir la latencia real por operación, el uso de recursos y e
 
 #### Resultados MongoDB
 
-| Consulta                | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS   | RSS Prom. (MB) | CPU (%) | Fallos |
-| ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- | ------ |
-| `find_by_movie_id`      | 2.90                | 5.42     | 11.91    | 17.6  | 134.01         | 11.64   | 0.15   |
-| `top_rated_movie`       | 3.24                | 5.22     | 11.70    | 17.5  | 102.78         | 8.79    | 0.00   |
-| `search_by_genre`       | 4.40                | 6.48     | 19.49    | 17.0  | 90.73          | 9.37    | 0.00   |
-| `search_by_title_regex` | 4.71                | 7.91     | 10.29    | 17.0  | 92.41          | 10.97   | 0.80   |
-| `user_movie_join`       | 4.09                | 7.68     | 12.62    | 17.25 | 84.76          | 10.08   | 0.60   |
+| Consulta                | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS   | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
+| ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- |------------|
+| `find_by_movie_id`      | 2.90                | 5.42     | 11.91    | 17.6  | 134.01         | 11.64   | 0.15       |
+| `top_rated_movie`       | 3.24                | 5.22     | 11.70    | 17.5  | 102.78         | 8.79    | 0.00       |
+| `search_by_genre`       | 4.40                | 6.48     | 19.49    | 17.0  | 90.73          | 9.37    | 0.00       |
+| `search_by_title_regex` | 4.71                | 7.91     | 10.29    | 17.0  | 92.41          | 10.97   | 0.80       |
+| `user_movie_join`       | 4.09                | 7.68     | 12.62    | 17.25 | 84.76          | 10.08   | 0.60       |
 
 #### Resultados Neo4j
 
-| Consulta                | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS   | RSS Prom. (MB) | CPU (%) | Fallos |
+| Consulta                | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS   | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
 | ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- | ------ |
 | `find_by_movie_id`      | 7.81                | 13.09    | 16.17    | 16.25 | 44.14          | 8.58    | 0.00   |
 | `top_rated_movie`       | 8.65                | 13.32    | 16.12    | 16.05 | 45.74          | 14.01   | 0.00   |
@@ -169,7 +171,7 @@ Se comparan las operaciones de escritura más comunes realizadas sobre ambas bas
 
 #### Resultados MongoDB
 
-| Operación                 | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos |
+| Operación                 | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
 |---------------------------|---------------------|----------|----------|------|----------------|---------|--------|
 | `insert_single_movie`     | 3.88                | 7.85     | 16.69    | 17.4 | 58.17          | 10.89   | 0.0    |
 | `insert_multiple_movies`  | 8.01                | 11.71    | 16.89    | 16.2 | 66.97          | 11.77   | 0.0    |
@@ -177,7 +179,7 @@ Se comparan las operaciones de escritura más comunes realizadas sobre ambas bas
 
 #### Resultados Neo4j
 
-| Operación                 | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos |
+| Operación                 | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
 |---------------------------|---------------------|----------|----------|------|----------------|---------|--------|
 | `insert_single_movie`     | 8.94                | 13.32    | 21.98    | 15.95| 47.30          | 14.25   | 0.0    |
 | `insert_multiple_movies`  | 15.10               | 19.34    | 25.57    | 14.5 | 43.27          | 11.80   | 0.0    |
@@ -253,7 +255,7 @@ SET r.timestamp = datetime({ epochSeconds: r.timestamp })
 
 #### Resultados Comparativos
 
-| Motor   | Iteraciones | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | CPU (%) | Memoria RSS (MB) | Fallos Mayores |
+| Motor   | Iteraciones | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | CPU (%) | Memoria RSS (MB) | Fallos/Seg |
 | ------- | ----------- |---------------------| -------- | -------- |------| ------- | ---------------- | -------------- |
 | MongoDB | 82          | 6.95                | 20.47    | 50.60    | 16.4 | 7.07    | 50.40            | 8.8            |
 | Neo4j   | 75          | 13.51               | 44.41    | 178.80   | 15.0 | 15.79   | 42.11            | 0.0            |
@@ -261,6 +263,5 @@ SET r.timestamp = datetime({ epochSeconds: r.timestamp })
 
 #### Análisis Comparativo
 - MongoDB muestra mejor latencia promedio y mayor throughput.
-- El uso de memoria es comparable, aunque MongoDB reporta más fallos de página mayores (major_faults_per_sec = 8.8), lo que podría indicar presión sobre la memoria mapeada del sistema.
+- El uso de memoria es comparable, aunque MongoDB reporta más fallos de página (major_faults_per_sec = 8.8), lo que podría indicar presión sobre la memoria mapeada del sistema.
 - La transformación en MongoDB utiliza $map y $toDate, mientras que Neo4j emplea datetime({ epochSeconds: ... }), ambos ejecutados en el servidor.
-- 
