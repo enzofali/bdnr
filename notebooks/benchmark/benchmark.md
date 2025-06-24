@@ -50,20 +50,20 @@ A continuación se presentan los tiempos medidos para cada motor de base de dato
 #### Neo4j
 
 | Tipo de Datos | Registros | Tiempo          |
-| ------------- | --------- |-----------------|
-| Usuarios      | 500       | 36.59 segundos  |
-| Películas     | 7,141     | 127.62 segundos |
-| Ratings       | 62,834    | 85.41 segundos  |
-| Etiquetas     | 811,156   | 77.37 segundos  |
-| Total         | —         | 168.17 segundos |
+| ------------- |-----------|-----------------|
+| Usuarios      | 2025      | 2.39 segundos   |
+| Películas     | 14,619    | 26.47 segundos  |
+| Ratings       | 293,308   | 666.61 segundos |
+| Etiquetas     | 924,902   | 274.78 segundos |
+| Total         | —         | 970.24 segundos |
 
 #### MongoDB
 
 | Tipo de Datos | Registros | Tiempo        |
-| ------------- | --------- | ------------- |
-| Usuarios      | 500       | 0.33 segundos |
-| Películas     | 7,141     | 0.33 segundos |
-| Total         | —         | 0.33 segundos |
+| ------------- |-----------|---------------|
+| Usuarios      | 2025      | 0.77 segundos |
+| Películas     | 14,619    | 0.77 segundos |
+| Total         | —         | 0.77 segundos |
 
 MongoDB presenta una carga inicial significativamente más rápida que Neo4j, principalmente debido a su modelo de documentos embebidos que no requiere relaciones explícitas.
 
@@ -131,29 +131,30 @@ con el objetivo de medir la latencia real por operación, el uso de recursos y e
 #### Resultados MongoDB
 
 | Consulta                | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS   | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
-| ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- |------------|
-| `find_by_movie_id`      | 2.90                | 5.42     | 11.91    | 17.6  | 134.01         | 11.64   | 0.15       |
-| `top_rated_movie`       | 3.24                | 5.22     | 11.70    | 17.5  | 102.78         | 8.79    | 0.00       |
-| `search_by_genre`       | 4.40                | 6.48     | 19.49    | 17.0  | 90.73          | 9.37    | 0.00       |
-| `search_by_title_regex` | 4.71                | 7.91     | 10.29    | 17.0  | 92.41          | 10.97   | 0.80       |
-| `user_movie_join`       | 4.09                | 7.68     | 12.62    | 17.25 | 84.76          | 10.08   | 0.60       |
+| ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- | ---------- |
+| `find_by_movie_id`      | 2.31                | 4.85     | 37.33    | 17.8  | 161.87         | 7.28    | 0.35       |
+| `top_rated_movie`       | 4.85                | 7.24     | 13.42    | 16.95 | 50.32          | 4.04    | 0.05       |
+| `search_by_genre`       | 9.20                | 12.37    | 16.37    | 15.2  | 73.01          | 7.32    | 0.00       |
+| `search_by_title_regex` | 6.93                | 9.83     | 11.12    | 16.2  | 120.48         | 5.52    | 0.80       |
+| `user_movie_join`       | 5.25                | 8.34     | 10.64    | 16.75 | 121.35         | 4.74    | 2.15       |
+
 
 #### Resultados Neo4j
 
 | Consulta                | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS   | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
-| ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- | ------ |
-| `find_by_movie_id`      | 7.81                | 13.09    | 16.17    | 16.25 | 44.14          | 8.58    | 0.00   |
-| `top_rated_movie`       | 8.65                | 13.32    | 16.12    | 16.05 | 45.74          | 14.01   | 0.00   |
-| `search_by_genre`       | 9.18                | 12.91    | 17.62    | 15.85 | 47.13          | 9.75    | 0.00   |
-| `search_by_title_regex` | 8.27                | 11.83    | 17.28    | 16.15 | 48.37          | 9.46    | 0.00   |
-| `user_movie_join`       | 40.77               | 112.83   | 183.16   | 10.6  | 43.53          | 11.87   | 0.00   |
+| ----------------------- | ------------------- | -------- | -------- | ----- | -------------- | ------- | ---------- |
+| `find_by_movie_id`      | 7.84                | 13.48    | 16.31    | 16.25 | 43.12          | 8.80    | 9.70       |
+| `top_rated_movie`       | 10.25               | 12.99    | 19.37    | 15.65 | 39.25          | 12.55   | 0.15       |
+| `search_by_genre`       | 5.13                | 7.02     | 20.69    | 16.85 | 38.34          | 10.61   | 0.00       |
+| `search_by_title_regex` | 4.87                | 6.75     | 19.27    | 17.0  | 40.93          | 9.20    | 0.00       |
+| `user_movie_join`       | 66.42               | 200.08   | 430.62   | 8.35  | 39.20          | 9.03    | 0.00       |
+
 
 #### Análisis Comparativo
-- MongoDB fue consistentemente más rápido en todas las consultas, con menor latencia promedio y mayor throughput (QPS).
-- Neo4j mostró un uso de memoria (RSS) más bajo en promedio, y cero fallos de página en todas las pruebas.
+- MongoDB ofrece mejor rendimiento bruto en términos de latencia y throughput, pero a costa de mayor uso de memoria.
+- Neo4j, aunque más lento especialmente en consultas con joins complejos, fue más estable en cuanto a errores y mostró menor uso de memoria.
 - Las consultas que involucran joins complejos (user_movie_join) penalizan mucho más a Neo4j, 
 indicando que sus patrones de acceso en grafos son más costosos en tiempo cuando no se explotan relaciones profundas.
-- MongoDB se mantuvo más eficiente pero tuvo mayor variación en los faults y uso de RSS en general.
 
 ---
 
@@ -171,27 +172,26 @@ Se comparan las operaciones de escritura más comunes realizadas sobre ambas bas
 
 #### Resultados MongoDB
 
-| Operación                 | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
-|---------------------------|---------------------|----------|----------|------|----------------|---------|--------|
-| `insert_single_movie`     | 3.88                | 7.85     | 16.69    | 17.4 | 58.17          | 10.89   | 0.0    |
-| `insert_multiple_movies`  | 8.01                | 11.71    | 16.89    | 16.2 | 66.97          | 11.77   | 0.0    |
-| `insert_user_with_ratings`| 2.61                | 5.59     | 10.01    | 17.75| 114.71         | 11.84   | 0.0    |
+| Operación                  | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
+| -------------------------- | ------------------- | -------- | -------- | ---- | -------------- | ------- | ---------- |
+| `insert_single_movie`      | 4.10                | 6.39     | 13.57    | 17.3 | 70.00          | 7.54    | 0.0        |
+| `insert_multiple_movies`   | 8.66                | 11.81    | 13.84    | 16.0 | 85.54          | 7.76    | 0.0        |
+| `insert_user_with_ratings` | 3.27                | 4.46     | 7.05     | 17.5 | 90.70          | 5.10    | 0.0        |
 
 #### Resultados Neo4j
 
-| Operación                 | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
-|---------------------------|---------------------|----------|----------|------|----------------|---------|--------|
-| `insert_single_movie`     | 8.94                | 13.32    | 21.98    | 15.95| 47.30          | 14.25   | 0.0    |
-| `insert_multiple_movies`  | 15.10               | 19.34    | 25.57    | 14.5 | 43.27          | 11.80   | 0.0    |
-| `insert_user_with_ratings`| 49.72               | 63.05    | 76.83    | 9.7  | 45.42          | 12.04   | 0.1    |
+| Operación                  | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | RSS Prom. (MB) | CPU (%) | Fallos/Seg |
+| -------------------------- | ------------------- | -------- | -------- | ---- | -------------- | ------- | ---------- |
+| `insert_single_movie`      | 10.97               | 14.98    | 19.06    | 15.4 | 39.64          | 4.88    | 0.0        |
+| `insert_multiple_movies`   | 17.10               | 21.30    | 27.29    | 14.1 | 41.24          | 6.20    | 0.0        |
+| `insert_user_with_ratings` | 50.23               | 63.01    | 83.64    | 9.65 | 42.76          | 6.06    | 0.0        |
 
 #### Análisis Comparativo
 
-- MongoDB demostró mejor rendimiento general en inserciones simples y por lotes, con menor latencia promedio y mayor throughput (`QPS`).
+- MongoDB muestra un rendimiento muy superior en latencia y throughput para inserciones individuales, en lote y con relaciones.
+- Neo4j, aunque más lento en escrituras, mantiene un consumo de memoria más bajo y consistente
 - La operación `insert_user_with_ratings` es particularmente más rápida en MongoDB debido a que sus documentos embeben los ratings directamente, 
-sin necesidad de crear relaciones explícitas entre nodos como en Neo4j. Esto refleja el costo de la creación de nodos + relaciones múltiples en el modelo de grafos.
-- Neo4j presentó un uso de memoria (`RSS`) más contenido y estable.
-
+sin necesidad de crear relaciones explícitas entre nodos como en Neo4j. Esto refleja el costo costo de mantener la integridad de grafos y vínculos entre nodos durante la escritura.
 ---
 
 ### Consultas de Actualización
@@ -256,12 +256,13 @@ SET r.timestamp = datetime({ epochSeconds: r.timestamp })
 #### Resultados Comparativos
 
 | Motor   | Iteraciones | Latencia Prom. (ms) | p95 (ms) | p99 (ms) | QPS  | CPU (%) | Memoria RSS (MB) | Fallos/Seg |
-| ------- | ----------- |---------------------| -------- | -------- |------| ------- | ---------------- | -------------- |
-| MongoDB | 82          | 6.95                | 20.47    | 50.60    | 16.4 | 7.07    | 50.40            | 8.8            |
-| Neo4j   | 75          | 13.51               | 44.41    | 178.80   | 15.0 | 15.79   | 42.11            | 0.0            |
+| ------- | ----------- | ------------------- | -------- | -------- | ---- | ------- | ---------------- | ---------- |
+| MongoDB | 340         | 4.92                | 7.50     | 13.59    | 17.0 | 8.81    | 100.40           | 2.7        |
+| Neo4j   | 290         | 15.23               | 45.81    | 57.59    | 14.5 | 7.67    | 43.22            | 0.0        |
+
 
 
 #### Análisis Comparativo
-- MongoDB muestra mejor latencia promedio y mayor throughput.
-- El uso de memoria es comparable, aunque MongoDB reporta más fallos de página (major_faults_per_sec = 8.8), lo que podría indicar presión sobre la memoria mapeada del sistema.
+- MongoDB resulta más eficiente en cuanto a latencia, throughput.
+- Neo4j, aunque más lento, ofrece una ejecución más estable y con menor consumo de memoria.
 - La transformación en MongoDB utiliza $map y $toDate, mientras que Neo4j emplea datetime({ epochSeconds: ... }), ambos ejecutados en el servidor.
