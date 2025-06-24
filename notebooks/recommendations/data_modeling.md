@@ -12,10 +12,10 @@ Diseñamos un sistema de recomendaciones en tiempo real para la página principa
 
 ### Modelo Embebido
 
-El modelo embebido resulta ideal para sistemas de recomendación que requieren rendimiento en tiempo real. En este esquema, toda la información relevante (interacciones, metadatos, estadísticas) se almacena dentro de documentos individuales por usuario o película, permitiendo:
+En este esquema, toda la información relevante (interacciones, metadatos, estadísticas) se almacena dentro de documentos individuales por usuario o película, permitiendo:
 
 - Lecturas eficientes con una sola operación (`O(1)`), eliminando la necesidad de joins.
-- Escalabilidad horizontal al fragmentar por `user_id` o `movie_id`.
+- Escalabilidad horizontal al fragmentar por `user_id` o `movie_id` (sharding).
 - Alta localidad de datos, incluso durante particiones de red.
 
 Este modelo favorece sistemas con cargas de lectura intensas, donde la latencia mínima y la disponibilidad son prioritarias.
@@ -33,15 +33,16 @@ El modelo normalizado, basado en colecciones separadas (usuarios, películas, in
 - Evita la duplicación de datos.
 - Mayor idoneidad para operaciones analíticas o actualizaciones concurrentes.
 
-Ejemplo: actualizar el título de una película requiere una sola operación en el modelo normalizado, mientras que en el embebido implica modificar múltiples documentos.
+Actualizar el título de una película requiere una sola operación en el modelo normalizado, mientras que en el embebido implica modificar múltiples documentos.
 
 ### CAP
 
 La decisión entre modelos depende del enfoque deseado:
 
-- **Modelo embebido:** recomendado cuando se prioriza **disponibilidad** y **baja latencia**, aceptando cierta **consistencia eventual**.
-- **Modelo normalizado:** adecuado cuando se requiere **consistencia fuerte**, especialmente en escenarios analíticos.
+- **Modelo embebido:** prioriza **disponibilidad** y **baja latencia**, aceptando cierta **consistencia eventual**.
+- **Modelo normalizado:** tiene una alta **consistencia**, especialmente util en escenarios analíticos.
 
 ### Enfoque Híbrido
 
-Una arquitectura mixta puede ser beneficiosa: usar un modelo embebido optimizado para recomendaciones en tiempo real y sincronizar periódicamente con un esquema normalizado para análisis. Esta dualidad permite balancear velocidad y precisión según el contexto.
+Una arquitectura mixta puede ser beneficiosa: usar un modelo embebido optimizado para recomendaciones en tiempo real y 
+sincronizar periódicamente con un esquema normalizado para análisis. Esta dualidad permite balancear velocidad y precisión según el contexto.
