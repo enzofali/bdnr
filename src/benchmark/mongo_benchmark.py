@@ -41,7 +41,7 @@ def run_benchmark(query_id: str,
         try:
             result, elapsed_time = run_query()
             # end-to-end latency (with client-side overhead)
-            wall_ms.append(elapsed_time / 1_000_000)
+            wall_ms.append(elapsed_time)
             success_count += 1
         except Exception as e:
             errors.append(str(e))
